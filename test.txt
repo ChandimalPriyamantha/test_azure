@@ -1,0 +1,17 @@
+2. Generate a New SSH Key (if needed)
+If no SSH key exists, generate one:
+
+- ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+
+3. Add the SSH Key to the SSH Agent
+Start the SSH agent and add the key:
+
+- eval "$(ssh-agent -s)"
+  ssh-add ~/.ssh/id_rsa
+
+4. Add the SSH Key to Your GitHub Account (Copy the SSH public key:)
+- cat ~/.ssh/id_rsa.pub
+
+5. Test the SSH Connection
+- ssh -T git@github.com
+
