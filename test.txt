@@ -60,3 +60,274 @@ App Services.
 
 4.3. Clean up resources
 az group delete --name myResourceGroup
+
+
+-----------------------------------------------1. TCP Socket Programming------------------------------------------------------------------------------
+Server Code:
+import java.io.*;
+import java.net.*;
+
+public class TCPServer {
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(8080)) {
+            System.out.println("Server is running...");
+            Socket socket = serverSocket.accept();
+            System.out.println("Client connected.");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
+            String clientMessage;
+            while ((clientMessage = in.readLine()) != null) {
+                System.out.println("Client: " + clientMessage);
+                if ("exit".equalsIgnoreCase(clientMessage)) {
+                    break;
+                }
+                out.println("Server received: " + clientMessage);
+            }
+            System.out.println("Connection closed.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Client Code:
+import java.io.*;
+import java.net.*;
+
+public class TCPClient {
+    public static void main(String[] args) {
+        try (Socket socket = new Socket("localhost", 8080)) {
+            System.out.println("Connected to server.");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+
+            String message;
+            while (true) {
+                System.out.print("Enter message: ");
+                message = userInput.readLine();
+                out.println(message);
+
+                if ("exit".equalsIgnoreCase(message)) {
+                    break;
+                }
+
+                System.out.println("Server: " + in.readLine());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+-------------------------------------------------------------2. UDP Socket Programming-----------------------------------------------------
+Server Code:
+
+import java.net.*;
+
+public class UDPServer {
+    public static void main(String[] args) {
+        try (DatagramSocket serverSocket = new DatagramSocket(8080)) {
+            System.out.println("UDP Server is running...");
+            byte[] receiveBuffer = new byte[1024];
+            byte[] sendBuffer;
+
+            while (true) {
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                serverSocket.receive(receivePacket);
+                String clientMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println("Client: " + clientMessage);
+
+                if ("exit".equalsIgnoreCase(clientMessage.trim())) {
+                    System.out.println("Connection closed.");
+                    break;
+                }
+
+                String response = "Server received: " + clientMessage;
+                sendBuffer = response.getBytes();
+                InetAddress clientAddress = receivePacket.getAddress();
+                int clientPort = receivePacket.getPort();
+                DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, clientAddress, clientPort);
+                serverSocket.send(sendPacket);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Client Code:
+
+import java.net.*;
+import java.util.Scanner;
+
+public class UDPClient {
+    public static void main(String[] args) {
+        try (DatagramSocket clientSocket = new DatagramSocket()) {
+            InetAddress serverAddress = InetAddress.getByName("localhost");
+            byte[] sendBuffer;
+            byte[] receiveBuffer = new byte[1024];
+            Scanner scanner = new Scanner(System.in);
+
+            while (true) {
+                System.out.print("Enter message: ");
+                String message = scanner.nextLine();
+                sendBuffer = message.getBytes();
+
+                DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, 8080);
+                clientSocket.send(sendPacket);
+
+                if ("exit".equalsIgnoreCase(message)) {
+                    break;
+                }
+
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                clientSocket.receive(receivePacket);
+                String serverResponse = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                System.out.println("Server: " + serverResponse);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+------------------------------------ RMI ------------------------------------------------
+1. Remote Interface (Shared by Server and Client
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+// Remote Interface
+public interface HelloService extends Remote {
+    String sayHello(String name) throws RemoteException;
+}
+
+2. RMI Server
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+// Server Implementation
+public class HelloServer extends UnicastRemoteObject implements HelloService {
+    protected HelloServer() throws RemoteException {
+        super();
+    }
+
+    @Override
+    public String sayHello(String name) throws RemoteException {
+        return "Hello, " + name + "! This message is from the RMI Server.";
+    }
+
+    public static void main(String[] args) {
+        try {
+            // Bind the remote object to the RMI registry
+            HelloService service = new HelloServer();
+            Naming.rebind("HelloService", service);
+            System.out.println("RMI Server is running...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+3. RMI Client
+
+import java.rmi.Naming;
+
+public class HelloClient {
+    public static void main(String[] args) {
+        try {
+            // Lookup the remote object from the RMI registry
+            HelloService service = (HelloService) Naming.lookup("rmi://localhost/HelloService");
+
+            // Call the remote method
+            String response = service.sayHello("User");
+            System.out.println("Response from Server: " + response);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+-----------------------------------------------RPC-----------------------------
+
+1. RPC Server
+
+import java.io.*;
+import java.net.*;
+
+public class RPCServer {
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(8080)) {
+            System.out.println("RPC Server is running...");
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Client connected.");
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+
+                String request = in.readLine();
+                System.out.println("Received request: " + request);
+
+                String response = handleRequest(request);
+                out.println(response);
+
+                clientSocket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Simulated RPC methods
+    private static String handleRequest(String request) {
+        switch (request.toLowerCase()) {
+            case "getdate":
+                return "Server Date: " + new java.util.Date();
+            case "getstatus":
+                return "Server Status: Running";
+            default:
+                return "Unknown RPC Method: " + request;
+        }
+    }
+}
+
+2. RPC Client
+
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class RPCClient {
+    public static void main(String[] args) {
+        try (Socket socket = new Socket("localhost", 8080)) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            Scanner scanner = new Scanner(System.in);
+
+            System.out.println("Connected to RPC Server.");
+
+            while (true) {
+                System.out.print("Enter RPC method (getDate, getStatus, exit): ");
+                String method = scanner.nextLine();
+
+                if (method.equalsIgnoreCase("exit")) {
+                    break;
+                }
+
+                out.println(method);
+                String response = in.readLine();
+                System.out.println("Server Response: " + response);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
