@@ -15,3 +15,48 @@ Start the SSH agent and add the key:
 5. Test the SSH Connection
 - ssh -T git@github.com
 
+mkdir ICTbatch3
+cd $HOME/ICTbatch3
+
+git clone https://github.com/Azure-Samples/html-docs-hello-world.git
+
+cd html-docs-hello-world
+az webapp up --location westeurope --name <app_name> --html
+
+Step 1: Download the sample locally
+git clone https://github.com/Azure-Samples/php-docs-hello-world
+cd php-docs-hello-world
+
+Step 3: Use Azure Cloud Shell to run commands in next steps
+Step 4: Configure a deployment user
+az webapp deployment user set --user-name <username> --password <password>
+
+Step 5: Create a resource group
+az group create --name myResourceGroup --location "West Europe"
+
+Step 6: Create an Azure App Service plan
+az appservice plan create --name myAppServicePlan --resource-group myResourceGroup --sku B1 --is-linux
+
+Step 7: Create a web app
+az webapp create --resource-group myResourceGroup --plan myAppServicePlan --name <app-name> --runtime "PHP|8.3" --deployment-local-git
+
+Step 8: Push to Azure from Git
+git remote add azure <deploymentLocalGitUrl-from-create-step>
+
+git push azure master
+
+Step 8: Browse to the app
+http://<app-name>.azurewebsites.net
+
+Update locally and redeploy the code
+echo "Hello Azure!”;
+
+git commit -am "updated output"
+git push azure master 
+
+4.2. Manage your new Azure app
+1. Go to the Azure portal to manage the web app you created. Search for and select
+App Services.
+
+4.3. Clean up resources
+az group delete --name myResourceGroup
